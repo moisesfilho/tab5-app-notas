@@ -1,0 +1,21 @@
+{
+  "id": "com.tab5.notas",
+  "name": "Notas",
+  "version": "1.0.0",
+  "author": "Tab5 OS Team",
+  "description": "Editor de notas de texto com suporte a teclado virtual e arquivos .txt e .cfg.",
+  "entry": "app.wasm",
+  "icon_symbol": "LV_SYMBOL_EDIT",
+  "icon_bg_color": "#F59E0B",
+  "file_associations": [
+    ".txt",
+    ".cfg",
+    ".md"
+  ],
+  "permissions": [
+    "storage.readwrite",
+    "ui.keyboard"
+  ],
+  "stack_size": 65536,
+  "heap_size": 131072
+}

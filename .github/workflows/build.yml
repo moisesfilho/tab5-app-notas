@@ -1,0 +1,36 @@
+name: Build and Package
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Checkout Tab5 OS SDK
+        uses: actions/checkout@v4
+        with:
+          repository: moisesfilho/tab5-os
+          path: tab5-os
+
+      - name: Build and Package .tab5pkg
+        run: |
+          export TAB5_SDK_PATH="${GITHUB_WORKSPACE}/tab5-os/sdk/tab5-app-sdk"
+          ./tools/build.sh
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: com.tab5.notas.tab5pkg
+          path: dist/com.tab5.notas.tab5pkg

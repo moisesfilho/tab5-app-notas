@@ -1,0 +1,6 @@
+build/
+dist/
+app.wasm
+*.o
+*.a
+.DS_Store
