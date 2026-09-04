@@ -28,7 +28,7 @@ static void on_new_note(void *user_data)
     (void)user_data;
     s_current_file[0] = '\0';
     tab5_ui_obj_t ta = tab5_ui_get_main_textarea();
-    if (ta != NULL) {
+    if (ta != TAB5_UI_INVALID_OBJ) {
         tab5_ui_textarea_set_text(ta, "");
     }
     update_app_title();
@@ -43,7 +43,7 @@ static void on_save_note(void *user_data)
     tab5_err_t err = tab5_storage_path_resolve(target, path, sizeof(path), true);
     if (err == TAB5_OK) {
         tab5_ui_obj_t ta = tab5_ui_get_main_textarea();
-        const char *content = (ta != NULL) ? tab5_ui_textarea_get_text(ta) : "";
+        const char *content = (ta != TAB5_UI_INVALID_OBJ) ? tab5_ui_textarea_get_text(ta) : "";
         FILE *f = fopen(path, "w");
         if (f != NULL) {
             fputs(content != NULL ? content : "", f);
@@ -67,7 +67,7 @@ static void app_init(void)
     tab5_ui_app_bar_add_action_button("LV_SYMBOL_SAVE", on_save_note, NULL);
     
     tab5_ui_obj_t ta = tab5_ui_get_main_textarea();
-    if (ta != NULL) {
+    if (ta != TAB5_UI_INVALID_OBJ) {
         tab5_ui_textarea_set_placeholder(ta, "Escreva sua nota...");
     }
     tab5_ui_show_toast("Notas aberto", 1500);
@@ -90,7 +90,7 @@ static void app_open_file(const char *filepath)
                     size_t read_bytes = fread(buf, 1, (size_t)sz, f);
                     buf[read_bytes] = '\0';
                     tab5_ui_obj_t ta = tab5_ui_get_main_textarea();
-                    if (ta != NULL) {
+                    if (ta != TAB5_UI_INVALID_OBJ) {
                         tab5_ui_textarea_set_text(ta, buf);
                     }
                     free(buf);
