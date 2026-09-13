@@ -5,7 +5,8 @@ Aplicativo de Bloco de Notas para o sistema operacional **Tab5 OS** (M5Stack Tab
 ## Características
 
 - Interface minimalista e responsiva integrada ao tema visual do Tab5 OS
-- Criação, edição e salvamento de arquivos de texto em sandbox (`/sdcard/data/com.tab5.notas/`)
+- Criação, edição e salvamento de arquivos de texto em `/sdcard/notas/`
+- Nome automático no formato `nota-YYYYMMDD-HHMMSS.txt`
 - Integração nativa com a barra de título do aplicativo (`App Bar`) e botões de ação
 - Associação automática de arquivos com as extensões `.txt`, `.cfg` e `.md`
 - Suporte ao Teclado Virtual nativo e teclados físicos Bluetooth HID

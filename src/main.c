@@ -9,6 +9,8 @@
 #include <string.h>
 
 static char s_current_file[256] = {0};
+static tab5_ui_obj_t s_new_button = TAB5_UI_INVALID_OBJ;
+static tab5_ui_obj_t s_save_button = TAB5_UI_INVALID_OBJ;
 
 static void update_app_title(void)
 {
@@ -38,24 +40,35 @@ static void on_new_note(void *user_data)
 static void on_save_note(void *user_data)
 {
     (void)user_data;
-    char path[256];
-    const char *target = (s_current_file[0] != '\0') ? s_current_file : "nota.txt";
-    tab5_err_t err = tab5_storage_path_resolve(target, path, sizeof(path), true);
-    if (err == TAB5_OK) {
-        tab5_ui_obj_t ta = tab5_ui_get_main_textarea();
-        const char *content = (ta != TAB5_UI_INVALID_OBJ) ? tab5_ui_textarea_get_text(ta) : "";
-        FILE *f = fopen(path, "w");
-        if (f != NULL) {
-            fputs(content != NULL ? content : "", f);
-            fclose(f);
-            tab5_system_log(2, "tab5_notas", "Nota salva com sucesso em sandbox");
-            tab5_ui_show_toast("Nota salva com sucesso!", 2000);
-            tab5_sound_play_beep(1200, 100);
-        } else {
-            tab5_ui_show_toast("Erro ao gravar arquivo", 2000);
+    char generated_path[256];
+    char timestamp[32];
+    const char *target = s_current_file;
+    if (target[0] == '\0') {
+        if (tab5_system_get_timestamp(timestamp, sizeof(timestamp)) != TAB5_OK) {
+            tab5_ui_show_toast("Erro ao obter data e hora", 2000);
+            return;
         }
+        snprintf(generated_path, sizeof(generated_path), "/sdcard/notas/nota-%s.txt", timestamp);
+        target = generated_path;
+    }
+    if (tab5_storage_mkdir("/sdcard/notas") != TAB5_OK) {
+        tab5_ui_show_toast("Erro ao preparar armazenamento", 2000);
+        return;
+    }
+    tab5_ui_obj_t ta = tab5_ui_get_main_textarea();
+    const char *content = (ta != TAB5_UI_INVALID_OBJ) ? tab5_ui_textarea_get_text(ta) : "";
+    content = content != NULL ? content : "";
+    if (tab5_storage_write_file(target, content, strlen(content)) == TAB5_OK) {
+        strncpy(s_current_file, target, sizeof(s_current_file) - 1);
+        s_current_file[sizeof(s_current_file) - 1] = '\0';
+        update_app_title();
+        char message[256];
+        snprintf(message, sizeof(message), "Nota salva: %s", s_current_file);
+        tab5_system_log(2, "tab5_notas", message);
+        tab5_ui_show_toast(message, 3000);
+        tab5_sound_play_beep(1200, 100);
     } else {
-        tab5_ui_show_toast("Erro de permissao ao salvar", 2500);
+        tab5_ui_show_toast("Erro ao gravar arquivo", 2000);
     }
 }
 
@@ -63,8 +76,8 @@ static void app_init(void)
 {
     tab5_system_log(2, "tab5_notas", "Aplicativo Notas iniciado");
     update_app_title();
-    tab5_ui_app_bar_add_action_button("LV_SYMBOL_PLUS", on_new_note, NULL);
-    tab5_ui_app_bar_add_action_button("LV_SYMBOL_SAVE", on_save_note, NULL);
+    s_new_button = tab5_ui_app_bar_add_action_button("LV_SYMBOL_PLUS", on_new_note, NULL);
+    s_save_button = tab5_ui_app_bar_add_action_button("LV_SYMBOL_SAVE", on_save_note, NULL);
     
     tab5_ui_obj_t ta = tab5_ui_get_main_textarea();
     if (ta != TAB5_UI_INVALID_OBJ) {
@@ -73,36 +86,45 @@ static void app_init(void)
     tab5_ui_show_toast("Notas aberto", 1500);
 }
 
+TAB5_APP_EXPORT void tab5_app_on_ui_event(tab5_ui_obj_t obj, uint32_t event_type, int32_t event_val)
+{
+    (void)event_val;
+    if (event_type != TAB5_UI_EVENT_CLICKED) {
+        return;
+    }
+    if (obj == s_new_button) {
+        on_new_note(NULL);
+    } else if (obj == s_save_button) {
+        on_save_note(NULL);
+    }
+}
+
 static void app_open_file(const char *filepath)
 {
     if (filepath != NULL && filepath[0] != '\0') {
         strncpy(s_current_file, filepath, sizeof(s_current_file) - 1);
         update_app_title();
         
-        FILE *f = fopen(filepath, "r");
-        if (f != NULL) {
-            fseek(f, 0, SEEK_END);
-            long sz = ftell(f);
-            fseek(f, 0, SEEK_SET);
-            if (sz >= 0 && sz < 65536) {
-                char *buf = (char *)malloc((size_t)sz + 1);
-                if (buf != NULL) {
-                    size_t read_bytes = fread(buf, 1, (size_t)sz, f);
-                    buf[read_bytes] = '\0';
-                    tab5_ui_obj_t ta = tab5_ui_get_main_textarea();
-                    if (ta != TAB5_UI_INVALID_OBJ) {
-                        tab5_ui_textarea_set_text(ta, buf);
-                    }
-                    free(buf);
-                }
+        char *buf = (char *)malloc(65536);
+        size_t read_bytes = 0;
+        if (buf != NULL &&
+            tab5_storage_read_file(filepath, buf, 65536, &read_bytes) == TAB5_OK) {
+            tab5_ui_obj_t ta = tab5_ui_get_main_textarea();
+            if (ta != TAB5_UI_INVALID_OBJ) {
+                tab5_ui_textarea_set_text(ta, buf);
             }
-            fclose(f);
         }
+        free(buf);
         
         char msg[128];
         snprintf(msg, sizeof(msg), "Arquivo aberto: %s", filepath);
         tab5_ui_show_toast(msg, 2000);
     }
+}
+
+TAB5_APP_EXPORT void tab5_app_on_open_file(const char *path)
+{
+    app_open_file(path);
 }
 
 static void app_resume(void)
@@ -134,5 +156,6 @@ TAB5_APP_EXPORT int main(int argc, char **argv)
     };
 
     tab5_lifecycle_register(&cbs);
+    app_init();
     return 0;
 }
