@@ -56,9 +56,16 @@ static void on_save_note(void *user_data)
         return;
     }
     tab5_ui_obj_t ta = tab5_ui_get_main_textarea();
-    const char *content = (ta != TAB5_UI_INVALID_OBJ) ? tab5_ui_textarea_get_text(ta) : "";
-    content = content != NULL ? content : "";
-    if (tab5_storage_write_file(target, content, strlen(content)) == TAB5_OK) {
+    char content[8192] = {0};
+    int32_t content_len = ta != TAB5_UI_INVALID_OBJ
+                              ? tab5_ui_textarea_copy_text(ta, content, sizeof(content))
+                              : 0;
+    if (content_len < 0 || (uint32_t)content_len >= sizeof(content)) {
+        tab5_ui_show_toast("Nota excede o limite de armazenamento", 2000);
+        return;
+    }
+    tab5_err_t write_err = tab5_storage_write_file(target, content, (size_t)content_len);
+    if (write_err == TAB5_OK) {
         strncpy(s_current_file, target, sizeof(s_current_file) - 1);
         s_current_file[sizeof(s_current_file) - 1] = '\0';
         update_app_title();
